@@ -26,4 +26,4 @@ def home():
 
 if __name__ == '__main__':
     # Server ko 0.0.0.0 par chalana zaroori hai taake EC2 ke bahar access ho sake
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=80)
