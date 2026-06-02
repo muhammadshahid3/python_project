@@ -1,0 +1,45 @@
+name: Real Docker CI CD to EC2
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    # 1. GitHub ke andar hi Login aur Build karna
+    - name: Login to Docker Hub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    - name: Build and Push Image
+      run: |
+        docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/my-quote-app:latest .
+        docker push ${{ secrets.DOCKERHUB_USERNAME }}/my-quote-app:latest
+
+  deploy:
+    needs: build-and-push # Pehle build hoga, phir deploy
+    runs-on: ubuntu-latest
+    steps:
+    - name: Deploy to EC2 via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.EC2_HOST }}
+        username: ubuntu
+        key: ${{ secrets.EC2_SSH_KEY }}
+        script: |
+          # 2. EC2 par sirf image pull hogi, koi git clone nahi!
+          docker stop test-container || true
+          docker rm test-container || true
+          
+          # Nayi paki-pakai image download karo
+          docker pull ${{ secrets.DOCKERHUB_USERNAME }}/my-quote-app:latest
+          
+          # Container chala do
+          docker run -dit -p 5000:5000 --name test-container ${{ secrets.DOCKERHUB_USERNAME }}/my-quote-app:latest
